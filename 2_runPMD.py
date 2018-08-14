@@ -1,6 +1,6 @@
 # -*- encoding:utf-8*-
 import os, re
-from collections import defaultdict, Counter
+from collections import OrderedDict, Counter
 
 def runPMD(projectName):
     
@@ -53,11 +53,18 @@ def getWarningInfo(projectName):
             # warning을 key로 다시 가지고 있는지 검사
             if not FileInfoDict[tokenLine[0]].has_key(tokenLine[2]):
                 # key로 가지고 있지 않다면, 해당 warning은 0부터 시작
-                FileInfoDict[tokenLine[0]] = {tokenLine[2]: 0}
+                FileInfoDict[tokenLine[0]] = {tokenLine[2]: 1}
             else:
                 FileInfoDict[tokenLine[0]][tokenLine[2]] += 1
     
-    return FileInfoDict
+    tmpOrderedDic = OrderedDict(sorted(FileInfoDict.items()))
+    
+    OUTPUT_FILE = open(ResultPath + 'PMD_RESULT3.txt', 'a')
+    for k1, sub_dic in tmpOrderedDic.items():
+        tmpSubOrderedDic = OrderedDict(sorted(sub_dic.items()))
+        
+        for k2, v in tmpSubOrderedDic.items():
+            OUTPUT_FILE.write(k1 + ',' + k2 + ',' + str(v) + '\n')
        
 # 프로젝트 리스트
 GIT_PROJECTS = ['bonita']
@@ -65,7 +72,4 @@ GIT_PROJECTS = ['bonita']
 # for project in GIT_PROJECTS:
 #     runPMD(project)
     
-fileInfoDict = getWarningInfo('bonita')
-for k, d in fileInfoDict.items():
-   for sub_k, v in d.items():
-       print k + ':' + sub_k + '=' + str(d[sub_k])
+getWarningInfo('bonita')
