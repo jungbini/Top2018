@@ -2,18 +2,36 @@
 import os, re
 from collections import OrderedDict, Counter
 
+ROOT_PATH               = 'D:/Tools/revision(TOP)/'
+TOOL_PATH               = 'D:/Tools/pmd-5.3.1/bin/'
+
+warnDict = OrderedDict()
+for line in open('D:/Tools/pmd-5.3.1/PMD_Rules(5.3.0).csv'):
+    warnDict[line.split(',')[1].strip()] =  0
+
 def runPMD(projectName):
     
-    SubjectPath = 'D:/Tools/revision(TOP)/' + projectName
+    SubjectPath = ROOT_PATH + projectName
     TrainsetPath = SubjectPath + '/DOWNLOAD/BUGGY/'
     ResultPath = SubjectPath + '/STATIC_ANALYSIS/AlertLifeTime/'
     
+    # 결과 저장 디렉토리가 없으면 생성
+    if not os.path.exists(ResultPath):
+        os.makedirs(ResultPath)
+    
     print TrainsetPath
   
-    cmd_result = os.system('pmd -d '+ TrainsetPath + ' -f csv -R java-basic,java-braces,java-clone,java-codesize,java-comments,java-controversial,java-coupling,java-design,java-typeresolution,java-empty,java-finalizers,java-imports,java-j2ee,java-javabeans,java-junit,java-logging-jakarta-commons,java-logging-java,java-migrating,java-naming,java-optimizations,java-strictexception,java-strings,java-sunsecure,java-unnecessary,java-unusedcode > ' + ResultPath + 'PMD_RESULT1.txt')
-        
-    if not cmd_result == 0:
-        print '에러 발생\n'        
+    curDir = os.getcwd()
+#     os.chdir(TOOL_PATH)    
+#     cmd_result = os.system('pmd -d '+ TrainsetPath + ' -f csv -R rulesets/java/basic.xml,rulesets/java/braces.xml,rulesets/java/clone.xml,'+
+#                                'rulesets/java/codesize.xml,rulesets/java/comments.xml,rulesets/java/controversial.xml,rulesets/java/coupling.xml,rulesets/java/design.xml,'+
+#                                'rulesets/java/empty.xml,rulesets/java/finalizers.xml,rulesets/java/imports.xml,rulesets/java/j2ee.xml,rulesets/java/javabeans.xml,'+
+#                                'rulesets/java/junit.xml,rulesets/java/logging-jakarta-commons.xml,rulesets/java/logging-java.xml,rulesets/java/migrating.xml,'+
+#                                'rulesets/java/naming.xml,rulesets/java/optimizations.xml,rulesets/java/strictexception.xml,rulesets/java/strings.xml,rulesets/java/sunsecure.xml,'+
+#                                'rulesets/java/typeresolution.xml,rulesets/java/unnecessary.xml,rulesets/java/unusedcode.xml > ' + ResultPath + 'PMD_RESULT1.txt')
+#           
+#     if not cmd_result == 0:
+#         print '에러 발생\n'        
 
     RESULT_FILE = open(ResultPath + 'PMD_RESULT1.txt', 'r')
     OUT_FILE = open(ResultPath + 'PMD_RESULT2.txt', 'w')
@@ -29,47 +47,76 @@ def runPMD(projectName):
                 filename = alertToken.group(3).replace('\\', '/')                         # 파일 이름, Alert 이름, 위반 라인 추출
                 filename = filename[filename.rfind('/')+1:]
                 alertline = alertToken.group(5)
-                alertname = alertToken.group(8)                                                             
+                alertname = alertToken.group(8)
+                
+                revNum = filename[:filename.rfind(']')+1]
+                tmpFilename = filename[filename.find(']')+1:]
+                finalFileName = tmpFilename + revNum                                                             
                  
-                OUT_FILE.write(filename + ',' + alertline + ',' + alertname + '\n')
+                OUT_FILE.write(finalFileName + ',' + alertline + ',' + alertname + '\n')
+                
+    os.chdir(curDir) 
 
 # PMD 파일에서 Warning 위반 갯수 정보 가져오는 함수
 def getWarningInfo(projectName):
     
     SubjectPath = 'D:/Tools/revision(TOP)/' + projectName
-    TrainsetPath = SubjectPath + '/DOWNLOAD/BUGGY/'
     ResultPath = SubjectPath + '/STATIC_ANALYSIS/AlertLifeTime/'
     
     filePath = ResultPath + 'PMD_RESULT2.txt'
     
-    FileInfoDict = dict()
+    OUTPUT_FILE = open(ResultPath + 'PMD_RESULT3.txt', 'a')
+    
+    WarnInfoDict = dict()                                                       # 파일별로 warning category에 위반된 갯수 저장
     for line in open(filePath):
         tokenLine = line.strip().split(',')        
         
-        if not FileInfoDict.has_key(tokenLine[0]):                      # 파일명 자체를 key로 가지고 있지 않으면,    
-            # 해당 warning도 새로 나온 것이므로, 해당 warning 0부터 시작
-            FileInfoDict[tokenLine[0]] = {tokenLine[2]: 0}
-        else:                                                            # 파일명을 key로 가지고 있다면,
-            # warning을 key로 다시 가지고 있는지 검사
-            if not FileInfoDict[tokenLine[0]].has_key(tokenLine[2]):
-                # key로 가지고 있지 않다면, 해당 warning은 0부터 시작
-                FileInfoDict[tokenLine[0]] = {tokenLine[2]: 1}
-            else:
-                FileInfoDict[tokenLine[0]][tokenLine[2]] += 1
-    
-    tmpOrderedDic = OrderedDict(sorted(FileInfoDict.items()))
-    
-    OUTPUT_FILE = open(ResultPath + 'PMD_RESULT3.txt', 'a')
-    for k1, sub_dic in tmpOrderedDic.items():
-        tmpSubOrderedDic = OrderedDict(sorted(sub_dic.items()))
+        try:
+            if not WarnInfoDict.has_key(tokenLine[0]):                          # 파일명 자체를 key로 가지고 있지 않으면,    
+                WarnInfoDict[tokenLine[0]] = warnDict.copy()                    # 모든 warning category key, value(0)를 복사                
+                WarnInfoDict[tokenLine[0]][tokenLine[2]] = 1                    # 해당 warning도 새로 나온 것이므로, 해당 warning 0부터 시작
+            else:                                                               # 파일명을 key로 가지고 있다면,            
+                WarnInfoDict[tokenLine[0]][tokenLine[2]] += 1
+        except KeyError:
+            print tokenLine[2] + ' warning은 없음.'            
         
-        for k2, v in tmpSubOrderedDic.items():
+    for k1, sub_dic in sorted(WarnInfoDict.items()):        
+        for k2, v in sub_dic.items():
             OUTPUT_FILE.write(k1 + ',' + k2 + ',' + str(v) + '\n')
+            
+    return WarnInfoDict
+
+def summarizeFixedWarning(projectName, warnInfoDict):
+    
+    SubjectPath = 'D:/Tools/revision(TOP)/' + projectName
+    ResultPath = SubjectPath + '/STATIC_ANALYSIS/AlertLifeTime/Summary/'
+    
+    # 결과 저장 디렉토리가 없으면 생성
+    if not os.path.exists(ResultPath):
+        os.makedirs(ResultPath)
+    
+    # warning category 불러오기
+    warnCategoryList = [warn.split(',')[1] for warn in open('D:/Tools/pmd-5.3.1/PMD_Rules(5.3.0).csv')]
+                
+    for k1, sub_dic in sorted(warnInfoDict.items()):
+        
+        fileName    = k1[:k1.find('.')]
+        revNum      = k1[k1.find('['):]      
+        
+        OUTFILE = open(ResultPath + fileName + '.csv', 'a')            
+        OUTFILE.write(revNum + ',')                               # 파일 리비전 넘버 기록
+        
+        for k2, v in sub_dic.items():
+            OUTFILE.write(str(v) + ',')
+        OUTFILE.write('\n')
+        
+    OUTFILE.close()
+    
        
 # 프로젝트 리스트
 GIT_PROJECTS = ['bonita']
 
-# for project in GIT_PROJECTS:
-#     runPMD(project)
-    
-getWarningInfo('bonita')
+for project in GIT_PROJECTS:
+#     runPMD(project)                                     # 1. PMD 실행
+    warnInfoDict = getWarningInfo(project)              # 2. 파일별 위반 warning 건수로 파싱
+    summarizeFixedWarning(project, warnInfoDict)        # 3. 파일별로 수정된 warning 건수 요약
