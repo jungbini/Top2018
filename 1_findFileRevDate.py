@@ -6,6 +6,8 @@ import datetime
 DatePattern = re.compile('Date:\s(.*)00\n')
 IndexPattern = re.compile('index ([0-9a-fA-F]+)..([0-9a-fA-F]+)\s([0-9]*)')
 FilepathPattern = re.compile('diff --git a(.*)java ')
+
+epoch = datetime.datetime.utcfromtimestamp(0)
     
 def openProject(projectName):
     
@@ -26,7 +28,8 @@ def openProject(projectName):
             tmpDate = line[6:line.rfind('+')].strip()
             
             # datetime 형식으로 저장
-            #tmpDate = convertStr2Datetime(line[6:line.rfind('+')].strip())      
+            tmpDate = convertStr2Datetime(line[6:line.rfind('+')].strip())
+            tmpDate = (tmpDate-epoch).total_seconds()      
 
             continue
         
@@ -44,7 +47,7 @@ def openProject(projectName):
                 tmpIndex = line[6:line.find('..')].strip()
                 
                 # 파일 쓰기
-                outputFile.write(tmpDate + ',[' + tmpIndex + ']' + tmpFileName + '\n')
+                outputFile.write(str(tmpDate) + ',' + tmpFileName + '[' + tmpIndex + ']\n')
                 
                 # 하나의 리비전에 여러 파일이 있기 때문에 하나를 쓰면 비워놔야 함
                 tmpFileName = ''

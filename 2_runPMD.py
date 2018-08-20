@@ -1,5 +1,5 @@
 # -*- encoding:utf-8*-
-import os, re
+import os, re, glob
 from collections import OrderedDict, Counter
 
 ROOT_PATH               = 'D:/Tools/revision(TOP)/'
@@ -101,7 +101,11 @@ def summarizeFixedWarning(projectName, warnInfoDict):
     for k1, sub_dic in sorted(warnInfoDict.items()):
         
         fileName    = k1[:k1.find('.')]
-        revNum      = k1[k1.find('['):]      
+        revNum      = k1[k1.find('['):]     
+        
+        # revision이 하나밖에 없는 파일은 변화를 관찰할 수 없으므로 생략
+        fileList = [files for files in warnInfoDict.keys() if fileName in files]        
+        if len(fileList) <= 1:  continue 
         
         OUTFILE = open(ResultPath + fileName + '.csv', 'a')            
         OUTFILE.write(revNum + ',')                               # 파일 리비전 넘버 기록
@@ -112,6 +116,20 @@ def summarizeFixedWarning(projectName, warnInfoDict):
         
     OUTFILE.close()
     
+def orderFilesbyRevDate(projectName):
+    
+    SubjectPath = 'D:/Tools/revision(TOP)/' + projectName
+    RevInfoPath = SubjectPath + '/DOWNLOAD/'
+    PMDResultPath = SubjectPath + '/STATIC_ANALYSIS/AlertLifeTime/Summary/'
+    
+    RevDateDict = dict()
+    for line in open(RevInfoPath + 'revDateperFile.csv'):
+        RevDateDict[line.split(',')[1]] = line.split(',')[0]
+    
+    for filename in glob.glob(PMDResultPath + '*.csv'):
+        for file in open(filename):
+            
+
        
 # 프로젝트 리스트
 GIT_PROJECTS = ['bonita']
