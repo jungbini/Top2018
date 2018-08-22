@@ -1,12 +1,13 @@
 # -*- encoding:utf-8*-
-import os, re, glob
+import os, re, glob, operator
 from collections import OrderedDict, Counter
 
-ROOT_PATH               = 'D:/Tools/revision(TOP)/'
-TOOL_PATH               = 'D:/Tools/pmd-5.3.1/bin/'
+DRIVE_PATH      = 'F:/'       
+ROOT_PATH       = DRIVE_PATH + 'Tools/revision(TOP)/'
+TOOL_PATH       = DRIVE_PATH + 'Tools/pmd-5.3.1/bin/'
 
 warnDict = OrderedDict()
-for line in open('D:/Tools/pmd-5.3.1/PMD_Rules(5.3.0).csv'):
+for line in open(DRIVE_PATH + 'Tools/pmd-5.3.1/PMD_Rules(5.3.0).csv'):
     warnDict[line.split(',')[1].strip()] =  0
 
 def runPMD(projectName):
@@ -22,16 +23,16 @@ def runPMD(projectName):
     print TrainsetPath
   
     curDir = os.getcwd()
-#     os.chdir(TOOL_PATH)    
-#     cmd_result = os.system('pmd -d '+ TrainsetPath + ' -f csv -R rulesets/java/basic.xml,rulesets/java/braces.xml,rulesets/java/clone.xml,'+
-#                                'rulesets/java/codesize.xml,rulesets/java/comments.xml,rulesets/java/controversial.xml,rulesets/java/coupling.xml,rulesets/java/design.xml,'+
-#                                'rulesets/java/empty.xml,rulesets/java/finalizers.xml,rulesets/java/imports.xml,rulesets/java/j2ee.xml,rulesets/java/javabeans.xml,'+
-#                                'rulesets/java/junit.xml,rulesets/java/logging-jakarta-commons.xml,rulesets/java/logging-java.xml,rulesets/java/migrating.xml,'+
-#                                'rulesets/java/naming.xml,rulesets/java/optimizations.xml,rulesets/java/strictexception.xml,rulesets/java/strings.xml,rulesets/java/sunsecure.xml,'+
-#                                'rulesets/java/typeresolution.xml,rulesets/java/unnecessary.xml,rulesets/java/unusedcode.xml > ' + ResultPath + 'PMD_RESULT1.txt')
-#           
-#     if not cmd_result == 0:
-#         print '에러 발생\n'        
+    os.chdir(TOOL_PATH)    
+    cmd_result = os.system('pmd -d '+ TrainsetPath + ' -f csv -R rulesets/java/basic.xml,rulesets/java/braces.xml,rulesets/java/clone.xml,'+
+                               'rulesets/java/codesize.xml,rulesets/java/comments.xml,rulesets/java/controversial.xml,rulesets/java/coupling.xml,rulesets/java/design.xml,'+
+                               'rulesets/java/empty.xml,rulesets/java/finalizers.xml,rulesets/java/imports.xml,rulesets/java/j2ee.xml,rulesets/java/javabeans.xml,'+
+                               'rulesets/java/junit.xml,rulesets/java/logging-jakarta-commons.xml,rulesets/java/logging-java.xml,rulesets/java/migrating.xml,'+
+                               'rulesets/java/naming.xml,rulesets/java/optimizations.xml,rulesets/java/strictexception.xml,rulesets/java/strings.xml,rulesets/java/sunsecure.xml,'+
+                               'rulesets/java/typeresolution.xml,rulesets/java/unnecessary.xml,rulesets/java/unusedcode.xml > ' + ResultPath + 'PMD_RESULT1.txt')
+           
+    if not cmd_result == 0:
+        print '에러 발생\n'        
 
     RESULT_FILE = open(ResultPath + 'PMD_RESULT1.txt', 'r')
     OUT_FILE = open(ResultPath + 'PMD_RESULT2.txt', 'w')
@@ -60,7 +61,7 @@ def runPMD(projectName):
 # PMD 파일에서 Warning 위반 갯수 정보 가져오는 함수
 def getWarningInfo(projectName):
     
-    SubjectPath = 'D:/Tools/revision(TOP)/' + projectName
+    SubjectPath = DRIVE_PATH + 'Tools/revision(TOP)/' + projectName
     ResultPath = SubjectPath + '/STATIC_ANALYSIS/AlertLifeTime/'
     
     filePath = ResultPath + 'PMD_RESULT2.txt'
@@ -88,7 +89,7 @@ def getWarningInfo(projectName):
 
 def summarizeFixedWarning(projectName, warnInfoDict):
     
-    SubjectPath = 'D:/Tools/revision(TOP)/' + projectName
+    SubjectPath = DRIVE_PATH + 'Tools/revision(TOP)/' + projectName
     ResultPath = SubjectPath + '/STATIC_ANALYSIS/AlertLifeTime/Summary/'
     
     # 결과 저장 디렉토리가 없으면 생성
@@ -96,7 +97,7 @@ def summarizeFixedWarning(projectName, warnInfoDict):
         os.makedirs(ResultPath)
     
     # warning category 불러오기
-    warnCategoryList = [warn.split(',')[1] for warn in open('D:/Tools/pmd-5.3.1/PMD_Rules(5.3.0).csv')]
+    warnCategoryList = [warn.split(',')[1] for warn in open(DRIVE_PATH + 'Tools/pmd-5.3.1/PMD_Rules(5.3.0).csv')]
                 
     for k1, sub_dic in sorted(warnInfoDict.items()):
         
@@ -118,23 +119,38 @@ def summarizeFixedWarning(projectName, warnInfoDict):
     
 def orderFilesbyRevDate(projectName):
     
-    SubjectPath = 'D:/Tools/revision(TOP)/' + projectName
+    SubjectPath = DRIVE_PATH + 'Tools/revision(TOP)/' + projectName
     RevInfoPath = SubjectPath + '/DOWNLOAD/'
     PMDResultPath = SubjectPath + '/STATIC_ANALYSIS/AlertLifeTime/Summary/'
-    
+        
     RevDateDict = dict()
     for line in open(RevInfoPath + 'revDateperFile.csv'):
         RevDateDict[line.split(',')[1]] = line.split(',')[0]
     
-    for filename in glob.glob(PMDResultPath + '*.csv'):
-        for file in open(filename):
-            
-
+    for filename in glob.glob(PMDResultPath + '*.csv'):    
+        
+        RevFiles = dict()
+        for revFile in open(filename):
+            revNum = revFile.split(',')[0]             # 파일의 Revision Number            
+            timestamp = [value for key, value in RevDateDict.items() if revNum in key][0]       # 해당 revision number를 포함하는 키를 찾아 timestamp를 저장            
+            RevFiles[timestamp] = revFile
+        
+        OUTPUT_FILE = open(SubjectPath + '/STATIC_ANALYSIS/AlertlifeTime/OrderedSummary/' + filename[filename.rfind('\\'):], 'a')        
+        OrderedRevFiles = OrderedDict(sorted(RevFiles.items(), reverse=False))
+        for key, value in OrderedRevFiles.items():
+            if OrderedRevFiles.keys().index(key) == 0:                
+                OUTPUT_FILE.write('0,' + value[value.find(',')+1:])
+            else:
+                prevTimestamp = OrderedRevFiles.keys()[OrderedRevFiles.keys().index(key)-1]
+                deltaTimestamp = round(float(key)) - round(float(prevTimestamp))
+                deltaDays = round(deltaTimestamp / 60 / 60 / 24)
+                OUTPUT_FILE.write(str(deltaDays) + value[value.find(',')+1:])
        
 # 프로젝트 리스트
 GIT_PROJECTS = ['bonita']
 
 for project in GIT_PROJECTS:
 #     runPMD(project)                                     # 1. PMD 실행
-    warnInfoDict = getWarningInfo(project)              # 2. 파일별 위반 warning 건수로 파싱
-    summarizeFixedWarning(project, warnInfoDict)        # 3. 파일별로 수정된 warning 건수 요약
+#     warnInfoDict = getWarningInfo(project)              # 2. 파일별 위반 warning 건수로 파싱
+#     summarizeFixedWarning(project, warnInfoDict)        # 3. 파일별로 수정된 warning 건수 요약
+    orderFilesbyRevDate(project)

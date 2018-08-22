@@ -12,10 +12,10 @@ epoch = datetime.datetime.utcfromtimestamp(0)
 def openProject(projectName):
     
     # 각 프로젝트에서 Commit Log 읽어오기
-    CommitLogFile = open('D:/Tools/revision(TOP)/' + projectName + '/COMMIT_LOG/BUGFIX_LOG.txt', 'r')
+    CommitLogFile = open('F:/Tools/revision(TOP)/' + projectName + '/COMMIT_LOG/BUGFIX_LOG.txt', 'r')
     
     # 날짜, 파일명 형식으로 기록
-    outputFile = open('D:/Tools/revision(TOP)/' + projectName + '/DOWNLOAD/revDateperFile.csv', 'a')
+    outputFile = open('F:/Tools/revision(TOP)/' + projectName + '/DOWNLOAD/revDateperFile.csv', 'a')
     
     tmpDate = ''
     tmpFileName = ''
