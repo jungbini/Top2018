@@ -2,7 +2,7 @@
 import os, re, glob, operator
 from collections import OrderedDict, Counter
 
-DRIVE_PATH      = 'F:/'       
+DRIVE_PATH      = 'D:/'       
 ROOT_PATH       = DRIVE_PATH + 'Tools/revision(TOP)/'
 TOOL_PATH       = DRIVE_PATH + 'Tools/pmd-5.3.1/bin/'
 
@@ -143,8 +143,8 @@ def orderFilesbyRevDate(projectName):
             else:
                 prevTimestamp = OrderedRevFiles.keys()[OrderedRevFiles.keys().index(key)-1]
                 deltaTimestamp = round(float(key)) - round(float(prevTimestamp))
-                deltaDays = round(deltaTimestamp / 60 / 60 / 24)
-                OUTPUT_FILE.write(str(deltaDays) + value[value.find(',')+1:])
+                deltaDays = deltaTimestamp / 60 / 60 / 24
+                OUTPUT_FILE.write(str(deltaDays) + ',' + value[value.find(',')+1:])
        
 # 프로젝트 리스트
 GIT_PROJECTS = ['bonita']
