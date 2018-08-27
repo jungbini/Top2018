@@ -2,7 +2,7 @@
 import os, re, glob, operator
 from collections import OrderedDict, Counter
 
-DRIVE_PATH      = 'D:/'       
+DRIVE_PATH      = 'F:/'       
 ROOT_PATH       = DRIVE_PATH + 'Tools/revision(TOP)/'
 TOOL_PATH       = DRIVE_PATH + 'Tools/pmd-5.3.1/bin/'
 
@@ -150,7 +150,7 @@ def orderFilesbyRevDate(projectName):
 GIT_PROJECTS = ['bonita']
 
 for project in GIT_PROJECTS:
-#     runPMD(project)                                     # 1. PMD 실행
-#     warnInfoDict = getWarningInfo(project)              # 2. 파일별 위반 warning 건수로 파싱
-#     summarizeFixedWarning(project, warnInfoDict)        # 3. 파일별로 수정된 warning 건수 요약
+    runPMD(project)                                     # 1. PMD 실행
+    warnInfoDict = getWarningInfo(project)              # 2. 파일별 위반 warning 건수로 파싱
+    summarizeFixedWarning(project, warnInfoDict)        # 3. 파일별로 수정된 warning 건수 요약
     orderFilesbyRevDate(project)
