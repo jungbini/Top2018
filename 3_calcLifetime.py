@@ -1,38 +1,47 @@
 # -*- encoding:utf-8*-
-import glob
+import glob, os, random
 from pandas import DataFrame
 from collections import OrderedDict
 
-DRIVE_PATH      = 'F:/'       
+DRIVE_PATH      = 'D:/'       
 ROOT_PATH       = DRIVE_PATH + 'Tools/revision(TOP)/'
 
 warningList = list()
 for line in open(DRIVE_PATH + 'Tools/pmd-5.3.1/PMD_Rules(5.3.0).csv'):
     warningList.append(line.split(',')[1].strip())
 
+
 def calcLifetime(project):
     
     PROJECT_PATH = ROOT_PATH + project + '/'
     LIFETIME_PATH = PROJECT_PATH + 'STATIC_ANALYSIS/AlertLifeTime/'
     PMDResultPath = LIFETIME_PATH + 'OrderedSummary/'
-    AlertLifetimePath = LIFETIME_PATH + 'FinalResult/'
+    AlertLifetimePath = LIFETIME_PATH + 'FinalResult/'    
+    PRIORITIZATION_PATH     = PROJECT_PATH + 'PRIORITIZATION/'
+    EVALUATION_PATH         = PRIORITIZATION_PATH + 'ALTEvaluation/'
+    
+    # 결과 저장 디렉토리가 없으면 생성
+    if not os.path.exists(AlertLifetimePath):
+        os.makedirs(AlertLifetimePath)        
+    if not os.path.exists(EVALUATION_PATH):
+        os.makedirs(EVALUATION_PATH)
         
     finalLifetimes = OrderedDict()
     for warnIndex in range(0, 248):
         finalLifetimes[warningList[warnIndex]] = 0
+
+    for filePath in glob.glob(PMDResultPath + '*.csv'):
         
-    for filename in glob.glob(PMDResultPath + '*.csv'):
-        
-        OUTFILE = open(AlertLifetimePath + filename[filename.rfind('\\')+1:], 'a')
+        OUTFILE = open(AlertLifetimePath + filePath[filePath.rfind('\\')+1:], 'a')                     
         
         revFileDict = dict()
-        for revFile in open(filename):
+        for revFile in open(filePath):
             revFileDict[revFile.split(',')[0]] = revFile.split(',')[1:-1]
         
         revFileDataFrame = DataFrame(revFileDict)           # Dictionary를 데이터 프레임으로 만들기
         
         warnIndex = 0
-        warningLifetimeDict = dict()
+        warningLifetimeDict = OrderedDict()
         for warnIndex in range(0, len(revFileDataFrame.index)): # 행을 기준으로 반복
             
             existWarning = False
@@ -71,15 +80,23 @@ def calcLifetime(project):
     # 값을 기준으로 정렬하기
     odFinalLifetimes = OrderedDict(sorted(finalLifetimes.items(), key=lambda x: x[1]))
     
-    FINAL_OUTPUT = open(LIFETIME_PATH + 'AlertLifetime.csv', 'a')
-    FINAL_OUTPUT.write('CategoryName,Weight,Ranking\n')    
+    FINAL_OUTPUT = open(EVALUATION_PATH + 'ALT_RANK.csv', 'a')
+    FINAL_OUTPUT.write('CategoryName,Weight,Ranking\n')
     
-    rank = 0
-    for key, value in odFinalLifetimes.items():
-        if value != 0:  rank += 1
-        
-        FINAL_OUTPUT.write(key + ',' + str(value) + ',' + str(rank) + '\n')
-        
+    rank = 1
+    maxrank = 0
+    zeroAlertList = list()
+    for key, value in sorted(odFinalLifetimes.items(), key=lambda (k, v): (v, k)):                
+                        
+        if value != 0:  
+            FINAL_OUTPUT.write(key + ',' + str(value) + ',' + str(rank) + '\n')        
+            rank += 1
+        else:
+            zeroAlertList.append(key + ',' + str(value))       # 값이 0인 warning은 따로 저장했다가 shuffle하기
+    
+    random.shuffle(zeroAlertList)                                                                   # 값이 0인 warning random shuffle    
+    for randomZeroAlert in zeroAlertList:
+        FINAL_OUTPUT.write(randomZeroAlert + ',' + str(rank) + '\n')
         
 # 프로젝트 리스트
 GIT_PROJECTS = ['bonita']
