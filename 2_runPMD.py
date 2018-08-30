@@ -1,8 +1,8 @@
 # -*- encoding:utf-8*-
-import os, re, glob, operator
-from collections import OrderedDict, Counter
+import os, re, glob, shutil
+from collections import OrderedDict
 
-DRIVE_PATH      = 'D:/'       
+DRIVE_PATH      = 'F:/'       
 ROOT_PATH       = DRIVE_PATH + 'Tools/revision(TOP)/'
 TOOL_PATH       = DRIVE_PATH + 'Tools/pmd-5.3.1/bin/'
 
@@ -16,8 +16,10 @@ def runPMD(projectName):
     TrainsetPath = SubjectPath + '/DOWNLOAD/BUGGY/'
     ResultPath = SubjectPath + '/STATIC_ANALYSIS/AlertLifeTime/'
     
-    # 결과 저장 디렉토리가 없으면 생성
-    if not os.path.exists(ResultPath):
+    if os.path.exists(ResultPath):         # 결과 저장 디렉토리가 있으면 기존 파일들 모두 지우기
+        shutil.rmtree(ResultPath)
+    
+    if not os.path.exists(ResultPath):      # 결과 저장 디렉토리가 없으면 생성
         os.makedirs(ResultPath)
     
     print TrainsetPath
@@ -66,20 +68,22 @@ def getWarningInfo(projectName):
     
     filePath = ResultPath + 'PMD_RESULT2.txt'
     
+    if os.path.exists(ResultPath + 'PMD_RESULT3.txt'):
+        os.remove(ResultPath + 'PMD_RESULT3.txt')
+    
     OUTPUT_FILE = open(ResultPath + 'PMD_RESULT3.txt', 'a')
     
     WarnInfoDict = dict()                                                       # 파일별로 warning category에 위반된 갯수 저장
     for line in open(filePath):
         tokenLine = line.strip().split(',')        
         
-        try:
+        if tokenLine[2] in warnDict.keys():                                     # 해당 warning이 PMD warning list에 있다면,
+        
             if not WarnInfoDict.has_key(tokenLine[0]):                          # 파일명 자체를 key로 가지고 있지 않으면,    
                 WarnInfoDict[tokenLine[0]] = warnDict.copy()                    # 모든 warning category key, value(0)를 복사                
                 WarnInfoDict[tokenLine[0]][tokenLine[2]] = 1                    # 해당 warning도 새로 나온 것이므로, 해당 warning 0부터 시작
             else:                                                               # 파일명을 key로 가지고 있다면,            
-                WarnInfoDict[tokenLine[0]][tokenLine[2]] += 1
-        except KeyError:
-            print tokenLine[2] + ' warning은 없음.'            
+                WarnInfoDict[tokenLine[0]][tokenLine[2]] += 1                    
         
     for k1, sub_dic in sorted(WarnInfoDict.items()):        
         for k2, v in sub_dic.items():
@@ -92,13 +96,12 @@ def summarizeFixedWarning(projectName, warnInfoDict):
     SubjectPath = DRIVE_PATH + 'Tools/revision(TOP)/' + projectName
     ResultPath = SubjectPath + '/STATIC_ANALYSIS/AlertLifeTime/Summary/'
     
-    # 결과 저장 디렉토리가 없으면 생성
-    if not os.path.exists(ResultPath):
-        os.makedirs(ResultPath)
+    if os.path.exists(ResultPath):         # 결과 저장 디렉토리가 있으면 기존 파일들 모두 지우기
+        shutil.rmtree(ResultPath)
     
-    # warning category 불러오기
-    warnCategoryList = [warn.split(',')[1] for warn in open(DRIVE_PATH + 'Tools/pmd-5.3.1/PMD_Rules(5.3.0).csv')]
-                
+    if not os.path.exists(ResultPath):      # 결과 저장 디렉토리가 없으면 생성
+        os.makedirs(ResultPath)
+               
     for k1, sub_dic in sorted(warnInfoDict.items()):
         
         fileName    = k1[:k1.find('.')]
@@ -121,18 +124,37 @@ def orderFilesbyRevDate(projectName):
     
     SubjectPath = DRIVE_PATH + 'Tools/revision(TOP)/' + projectName
     RevInfoPath = SubjectPath + '/DOWNLOAD/'
-    PMDResultPath = SubjectPath + '/STATIC_ANALYSIS/AlertLifeTime/Summary/'
+    STATIC_ANALYSIS_PATH = SubjectPath + '/STATIC_ANALYSIS/AlertLifeTime/'
+    PMDResultPath = STATIC_ANALYSIS_PATH + 'Summary/'
+    OrderedResultPath = STATIC_ANALYSIS_PATH + 'OrderedSummary/'
+    
+    if os.path.exists(OrderedResultPath):         # 결과 저장 디렉토리가 있으면 기존 파일들 모두 지우기
+        shutil.rmtree(OrderedResultPath)
+    
+    # 결과 저장 디렉토리가 없으면 생성
+    if not os.path.exists(OrderedResultPath):
+        os.makedirs(OrderedResultPath)
         
     RevDateDict = dict()
     for line in open(RevInfoPath + 'revDateperFile.csv'):
-        RevDateDict[line.split(',')[1]] = line.split(',')[0]
+        
+        fileName = line.split(',')[1].strip()
+        timeStamp = line.split(',')[0]
+        
+        RevDateDict[fileName] = timeStamp
     
     for filename in glob.glob(PMDResultPath + '*.csv'):    
-        
+                
         RevFiles = dict()
         for revFile in open(filename):
             revNum = revFile.split(',')[0]             # 파일의 Revision Number            
-            timestamp = [value for key, value in RevDateDict.items() if revNum in key][0]       # 해당 revision number를 포함하는 키를 찾아 timestamp를 저장            
+
+            try:
+                timestamp = [value for key, value in RevDateDict.items() if revNum in key][0]       # 해당 revision number를 포함하는 키를 찾아 timestamp를 저장
+            except IndexError:
+                print filename + '이 리스트에 없습니다.'
+                continue
+                  
             RevFiles[timestamp] = revFile
         
         OUTPUT_FILE = open(SubjectPath + '/STATIC_ANALYSIS/AlertlifeTime/OrderedSummary/' + filename[filename.rfind('\\'):], 'a')        
@@ -147,9 +169,12 @@ def orderFilesbyRevDate(projectName):
                 OUTPUT_FILE.write(str(deltaDays) + ',' + value[value.find(',')+1:])
        
 # 프로젝트 리스트
-GIT_PROJECTS = ['bonita']
+PROJECTS = ['bonita', 'cassandra', 'checkstyle', 'elasticsearch', 'flink', 'guava', 'guice', 'hadoop_git', 'itext-itextpdf', 'jackrabbit', 'jbpm', 'jclouds', 
+            'jenkins', 'libgdx', 'mahout', 'maven_core', 'mylyn', 'neo4j', 'openmap', 'orientdb', 'pivot', 'titan', 'tomcat', 'wildfly', 'ant', 'drools', 'lucene_trunk']
 
-for project in GIT_PROJECTS:
+for project in PROJECTS:
+    print project + ' Project Static analysis 수행 중...'
+    
 #     runPMD(project)                                     # 1. PMD 실행
     warnInfoDict = getWarningInfo(project)              # 2. 파일별 위반 warning 건수로 파싱
     summarizeFixedWarning(project, warnInfoDict)        # 3. 파일별로 수정된 warning 건수 요약
